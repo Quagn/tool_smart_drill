@@ -23,7 +23,7 @@ void ota()
       tft.print("WF:");
       tft.setCursor(70, 80);         
       tft.print(ssid);
-      delay(2000);
+      delay(3000);
       tft.setCursor(30, 110);    
       tft.setTextSize(2);     
       tft.print(WiFi.localIP());
