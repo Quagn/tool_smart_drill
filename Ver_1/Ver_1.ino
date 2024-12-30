@@ -1,46 +1,82 @@
-uint8_t                                     // Pin inout
-pin_trigger_direction = 39,                     // Trigger pin
-pin_trigger_power     = 34,
+//#include "Arduino"
 
-pin_esc_direction     = 33,                     // Esc pin
-pin_esc_power         = 32,
+#include <SPI.h>                                                ////// Comunicate Wired lib
+#include <OneWire.h>
+#include <Wire.h>
 
-pin_button            = 36,                     // Add pin
-pin_buzzer            = 26,
-pin_led               = 25,
-pin_temp              = 27,
-pin_batt              = 35;
-
-#include <WiFi.h>
-const char* ssid = "MinhPhone";
+#include <WiFi.h>                                               ////// Comunicate Wireless lib
+const char* ssid = "MinhPhone";                             // Wifi
 const char* password = "12341234";
-
-#include <AsyncTCP.h>
-#include <ESPAsyncWebSrv.h>                     // Wev lib
-
-#include <AsyncElegantOTA.h>                    // OTA lib
-AsyncWebServer server(80);
 // MAC Addr: 94:b5:55:2b:5c:64
 
-#include <esp_now.h>                            // Remote lib
-typedef struct data_remote {
+uint8_t                                                         ////// Input
+pin_imu_sda           = 21,                                 // Imu
+pin_imu_scl           = 22;                    
+#define MPU6050_ADDR  0x68
+#define BMP180_ADDR   0x77
+#define HMC5883_ADDR  0x1E
+
+int32_t 
+accex, accey, accez,                                        // MPU6050
+caliaccex, caliaccey, caliaccez,
+gyrox, gyroy, gyroz,                              
+caligyrox, caligyroy, caligyroz,         
+temp_ext,
+magnex, magney, magnez,                                     // HMC5883L
+calimagnex, calimagney, calimagnez, 
+pressure, temp_baro, calibaro,                              // BMP180
+calibaroac1, calibaroac2, calibaroac3,                      // AC1, AC2, AC3      (signed)
+calibaroac4, calibaroac5, calibaroac6,                      // AC4, AC5, AC6    (unsigned)
+calibarob1, calibarob2, calibaromb, calibaromc, calibaromd; // B1, B2, MB, MC, MD (signed)
+
+
+
+uint8_t 
+pin_temp              = 27,
+
+pin_batt              = 35,                                 // Batt Vol
+batt                  = 0,                                  // Batt percen
+
+pin_button            = 36,                                 // Button (adc)
+button                = 0,                                  // Button status
+bthold                = 0;                                  // Button hold
+#include <DallasTemperature.h>                              // Temp Int
+OneWire oneWire(pin_temp);
+DallasTemperature temp_sen_int(&oneWire);
+
+#include <esp_now.h>                                        // Remote trigger
+typedef struct data_remote {                              // Stuct data
   uint8_t power;
   bool direction_;
 } data_remote;
 data_remote remote;
+uint8_t                                              
+pin_trigger_direction = 39,                                 
+pin_trigger_power     = 34,
+remote_on             = 0;                                // Remote status
 
-#include <SPI.h>                                // Comunicate lib
-#include <OneWire.h>
-#include <Wire.h>
+uint8_t                                                         ////// Output
+pin_esc_direction     = 33,                                 // Esc pin
+pin_esc_power         = 32,
+power                 = 0,                                  // Power val 
+ 
 
-#include <DallasTemperature.h>                  // Int temp lib
-OneWire oneWire(pin_temp);
-DallasTemperature temp_sen_int(&oneWire);
+pin_buzzer            = 26,                                 // Buzzer pin
+buzzer_on             = 0,                                  // Buzzer val
 
-#include <TFT_eSPI.h>                           // Lcd lib
+pin_led               = 25,                                 // Led pin
+led_on                = 0;                                  // Led val
+
+#include <TFT_eSPI.h>                                           // Lcd lib
 TFT_eSPI tft = TFT_eSPI();
 #define SCREEN_RAIDUS 240
 #define SCREEN_CENTER 120
+
+#include <AsyncTCP.h>
+#include <ESPAsyncWebSrv.h>                                     // Wev lib
+#include <AsyncElegantOTA.h>                                    // OTA lib
+AsyncWebServer server(80);
+
 int16_t 
 prevMode = -1,
 prevBatt = -1,
@@ -69,39 +105,17 @@ window_timr   = 12500;                          // Windows time 80Hz
 
 
 uint8_t
-batt        = 0,                                // Batt percen
-power       = 0,                                // Power val    
-buzzer_on   = 0,                                // Buzz val
-led_on      = 0,                                // Led val
-button      = 0,                                // Button status
-bthold      = 0,                                // Button hold
-remote_on   = 0,                                // Remote status
-drill_mode  = 1,                                // Drill mode
-mode_run    = 2,                                // Mode runing
-last_run    = 2,                                // Last mode
-protection  = 0;                                // Protection status   
+drill_mode    = 1,                              // Drill mode
+mode_run      = 2,                              // Mode runing
+last_run      = 2,                              // Last mode
+protection    = 0;                              // Protection status   
 
-bool
-led_dri_on  = false, prev_led_dri_on  = false,  // Led drill status
-led_alw_on  = false, prev_led_alw_on  = false,  // Led always status
-direction_  = true , prev_direction_  = true ,  // Direction
-tear_on     = false,                            // Tear
-primer_on   = false;                            // Esc primer                   
-
-  ///////////////////////////////// SENSOR    
-#define MPU6050_ADDR  0x68
-#define BMP180_ADDR   0x77
-#define HMC5883_ADDR  0x1E
-
-int32_t
-accex, accey, accez , gyrox, gyroy, gyroz, temp_ext,                            // MPU6050
-caligyrox, caligyroy, caligyroz,         
-magnex, magney, magnez,                                                         // HMC5883L
-calimagnex, calimagney, calimagnez, 
-pressure, temp_baro, calibaro,                                                  // BMP180
-calibaroac1, calibaroac2, calibaroac3,                      // AC1, AC2, AC3      (signed)
-calibaroac4, calibaroac5, calibaroac6,                      // AC4, AC5, AC6    (unsigned)
-calibarob1, calibarob2, calibaromb, calibaromc, calibaromd; // B1, B2, MB, MC, MD (signed)
+bool                                              // Display menu
+led_dri_on    = false, prev_led_dri_on  = false,  // Led drill status
+led_alw_on    = false, prev_led_alw_on  = false,  // Led always status
+direction_    = true , prev_direction_  = true ,  // Direction
+tear_on       = false,                            // Tear
+primer_on     = false;                            // Esc primer                   
 
   ///////////////////////////////// STATUS                                     
 float
@@ -113,11 +127,10 @@ Tear_Roll, Tear_Pitch, Tear_Yaw;                                  // TearAngle
   ///////////////////////////////// FILLTER    
 
 #define NUM_SAMPLES 10  // Số lần trung bình cộng
-
 // Mảng lưu giá trị 10 lần tính toán gần nhất
-float rollSamples[NUM_SAMPLES] = {0};
+float rollSamples [NUM_SAMPLES] = {0};
 float pitchSamples[NUM_SAMPLES] = {0};
-float yawSamples[NUM_SAMPLES] = {0};
+float yawSamples  [NUM_SAMPLES] = {0};
 
 // Tổng dùng để tính trung bình
 float totalRoll = 0, totalPitch = 0, totalYaw = 0;
@@ -139,7 +152,6 @@ void setup(void)
   ota();                                                          // Ota
 
   setup_trigger();                                                // Setup trigger
-  setup_lcd();                                                    // Setup LCD
   setup_esc();                                                    // Setup ESC
   setup_led_buzzer();                                             // Setup Add
   setup_sensor();                                                 // Setup sensor
@@ -165,24 +177,24 @@ void setup(void)
 }
 
   ///////////////////////// INPUT /////////////////////////
-void ReadTrigger(void *pvParameters) {
-  (void) pvParameters;
+void ReadTrigger(void *pvParameters) 
+{
   for (;;){
     read_Trigger();
     vTaskDelay(65 / portTICK_PERIOD_MS);
   }
 }
 
-void ReadButton(void *pvParameters) {
-  (void) pvParameters;
+void ReadButton(void *pvParameters) 
+{
   for (;;){
     read_Button();
     vTaskDelay(165 / portTICK_PERIOD_MS);
   }
 }
 
-void ReadIMU(void *pvParameters) {
-  (void) pvParameters;
+void ReadIMU(void *pvParameters) 
+{
   for (;;){
     read_AcGy();
     read_Baro();
@@ -191,16 +203,16 @@ void ReadIMU(void *pvParameters) {
   }
 }
 
-void ReadTemp(void *pvParameters) {
-  (void) pvParameters;
+void ReadTemp(void *pvParameters) 
+{
   for (;;){
     read_Temp();
     vTaskDelay(1650 / portTICK_PERIOD_MS);
   }
 }
 
-void ReadBatt(void *pvParameters) {
-  (void) pvParameters;
+void ReadBatt(void *pvParameters) 
+{
   for (;;){
     read_Batt();
     vTaskDelay(1650 / portTICK_PERIOD_MS);
@@ -208,24 +220,24 @@ void ReadBatt(void *pvParameters) {
 }
   
   ///////////////////////// CALCU /////////////////////////
-void Mode(void *pvParameters) {
-  (void) pvParameters;
+void Mode(void *pvParameters) 
+{
   for (;;){
     mode_menu();
     vTaskDelay(250 / portTICK_PERIOD_MS);
   }
 }
 
-void Calculator(void *pvParameters) {
-  (void) pvParameters;
+void Calculator(void *pvParameters) 
+{
   for (;;){
     calculator();
     vTaskDelay(215 / portTICK_PERIOD_MS);
   }
 }
 
-void Protect(void *pvParameters) {
-  (void) pvParameters;
+void Protect(void *pvParameters) 
+{
   for (;;){
     protection_();
     vTaskDelay(215 / portTICK_PERIOD_MS);
@@ -233,32 +245,32 @@ void Protect(void *pvParameters) {
 }
 
   ///////////////////////// OUTPUT /////////////////////////
-void RunEsc(void *pvParameters) {
-  (void) pvParameters;
+void RunEsc(void *pvParameters) 
+{
   for (;;){
     run_esc();
   }
 }
 
-void RunBuzz(void *pvParameters) {
-  (void) pvParameters;
+void RunBuzz(void *pvParameters) 
+{
   for (;;){
     run_buzzer(buzzer_on);
   }
 }
 
-void RunLed(void *pvParameters) {
-  (void) pvParameters;
+void RunLed(void *pvParameters)
+{
   for (;;){
     run_led(led_on);
   }
 }
 
-void RunLcd(void *pvParameters) {
-  (void) pvParameters;
+void RunLcd(void *pvParameters)
+{
   for (;;){
     run_lcd();
-    vTaskDelay(40 / portTICK_PERIOD_MS);
+    vTaskDelay(30 / portTICK_PERIOD_MS);
   }
 }
 

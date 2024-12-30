@@ -5,7 +5,7 @@ void setup_sensor()
   temp_sen_int.requestTemperatures();
 
   Wire.setClock(700000);                  // Setup I2C bus          
-  Wire.begin(22, 21);
+  Wire.begin(pin_imu_scl, pin_imu_sda);
   delay(10);
 
   // Setup MPU6050
