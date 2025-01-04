@@ -29,8 +29,6 @@ calibaroac1, calibaroac2, calibaroac3,                      // AC1, AC2, AC3    
 calibaroac4, calibaroac5, calibaroac6,                      // AC4, AC5, AC6    (unsigned)
 calibarob1, calibarob2, calibaromb, calibaromc, calibaromd; // B1, B2, MB, MC, MD (signed)
 
-
-
 uint8_t 
 pin_temp              = 27,
 
@@ -78,20 +76,25 @@ TFT_eSPI tft = TFT_eSPI();
 AsyncWebServer server(80);
 
 int16_t 
-prevMode = -1,
-prevBatt = -1,
-prevLedAlw = -1,
-prevLedDri = -1,
-prev_x = -1, prev_y = -1,               // Mode 1 (DRILL)
-perv_drill_mode,
-prev_x1r = -1, prev_y1r = -1,           // Mode 2 (IDLE)
-prev_x2r = -1, prev_y2r = -1,
-prev_pitchX1r[5], prev_pitchY1r[5], 
-prev_pitchX2r[5], prev_pitchY2r[5],
-prevHeading = -1,                       // Mode 3 (MEASURE)
-prevAltitude = -1,  
-prevTemp = -1,
-prevRemote;                             // Mode 4 (REMOTE)
+prevMode        = -1,
+prevBatt        = -1,
+prevLedAlw      = -1,
+prevLedDri      = -1,
+prev_x          = -1, 
+prev_y          = -1,                                     // Mode 1 (DRILL)
+perv_drill_mode =  0,
+prev_x1r        = -1, 
+prev_y1r        = -1,                                     // Mode 2 (IDLE)
+prev_x2r        = -1, 
+prev_y2r        = -1,
+prev_pitchX1r[5], 
+prev_pitchY1r[5], 
+prev_pitchX2r[5], 
+prev_pitchY2r[5],
+prevHeading     = -1,                                     // Mode 3 (MEASURE)
+prevAltitude    = -1,  
+prevTemp        = -1,
+prevRemote      =  0;                                     // Mode 4 (REMOTE)
 
 ///////////////////////////// Valual /////////////////////////////
 uint32_t
@@ -102,7 +105,6 @@ idle_timer    = 0,                              // Idle timer
 sensor_timer  = 0,                              // Sensor timer
 pulse_time    = 300,                            // Pulse drill time
 window_timr   = 12500;                          // Windows time 80Hz
-
 
 uint8_t
 drill_mode    = 1,                              // Drill mode
